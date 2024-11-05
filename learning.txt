@@ -1,3 +1,4 @@
 Navlink provide an class , which has name "active" 
 useNavigate hooks help to move between the path
 scrollTO : it javascript function which shift window to particular part
+useParams : help to fetch params like /doctors/:id  , id is a params
