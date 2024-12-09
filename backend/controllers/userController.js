@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import userModel from '../models/userModel.js'
 import {v2 as cloudinary} from 'cloudinary'
 import doctorModel from '../models/doctorModel.js'
+import appointmentModel from '../models/appointementModel.js'
 
 // api to registration
 
@@ -124,14 +125,46 @@ const bookAppointment = async (req , res)=>{
 
     try {
 
-        const {userId, docId , slotDate , slotTime } = req.body 
+        const {userId, id : docId , slotDate , slotTime } = req.body 
 
         const docData = await doctorModel.findById(docId).select('-password')
-
         if(!docData.available){
-            return res.json({success : false , message : "Doctor not available"})
             
+            return res.json({success : false , message : "Doctor not available"})
+
         }
+        let slots_booked = docData.slots_booked ; 
+
+        //checkimg for slot availabilit
+
+        if(slots_booked[slotDate]){
+            if(slots_booked[slotDate].includes(slotTime)){
+                return res.json({success : false , message : "slot not available"})
+            }
+            else{
+                slots_booked[slotDate].push(slotTime)
+            }
+        }else{
+            slots_booked[slotDate] = []
+            slots_booked[slotDate].push(slotTime)
+        }
+
+        const userData = await userModel.findById(userId).select('-password')
+
+        delete  docData.slots_booked 
+        const appointementData = {
+            userId  , docId , userData , docData , amount : docData.fees , slotTime , slotDate , date : Date.now()
+        }
+
+        const newAppointement = new appointmentModel(appointementData)
+        await newAppointement.save();
+
+
+        // save slot data 
+
+        await doctorModel.findByIdAndUpdate(docId , {slots_booked})
+
+        return res.json({success : true , message : "appointment book successfully"})
         
     } catch (error) {
         console.log(error)
@@ -140,4 +173,4 @@ const bookAppointment = async (req , res)=>{
 }
 
 
-export {registerUser , loginUser ,getProfile , updateProfile}
+export {registerUser , loginUser ,getProfile , updateProfile , bookAppointment}
